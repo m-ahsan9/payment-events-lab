@@ -1,8 +1,51 @@
 import express from "express";
+import type { ErrorRequestHandler } from "express";
+import { createHmac, timingSafeEqual } from "node:crypto";
 import { Prisma } from "./generated/prisma/client.js";
 import { prisma } from "./db.js";
 const app = express();
-app.use(express.json());
+const webhookSecret = process.env.WEBHOOK_SECRET;
+
+if (!webhookSecret) {
+    throw new Error("WEBHOOK_SECRET is missing");
+}
+app.use(express.json({
+   verify(req, res, buffer) {
+    const signature = req.headers["x-webhook-signature"];
+    const timestamp = req.headers["x-webhook-timestamp"];
+
+    if (
+        typeof signature !== "string" ||
+        !/^[0-9a-f]{64}$/.test(signature)
+    ) {
+        throw new Error("Missing or invalid webhook signature");
+    }
+
+    if (
+        typeof timestamp !== "string" ||
+        !/^[0-9]{1,12}$/.test(timestamp)
+    ) {
+        throw new Error("Missing or invalid webhook timestamp");
+    }
+
+    const timestampSeconds = Number(timestamp);
+    const nowSeconds = Math.floor(Date.now() / 1000);
+
+    if (Math.abs(nowSeconds - timestampSeconds) > 300) {
+        throw new Error("Webhook timestamp is outside the allowed window");
+    }
+
+    const expectedSignature = createHmac("sha256", webhookSecret)
+        .update(timestamp + ".")
+        .update(buffer)
+        .digest();
+
+    const suppliedSignature = Buffer.from(signature, "hex");
+
+    if (!timingSafeEqual(expectedSignature, suppliedSignature)) {
+        throw new Error("Webhook signature does not match");
+    }
+}}))
 const port = 3000;
 
 
@@ -105,6 +148,27 @@ catch (error) {
 
                                                          
 })
+
+const errorHandler: ErrorRequestHandler = (
+    error: unknown,
+    req,
+    res,
+    next
+) => {
+    if (
+        error instanceof Error &&
+        "type" in error &&
+        error.type === "entity.verify.failed"
+    ) {
+        return res.status(403).json({
+            error: "Invalid webhook signature"
+        });
+    }
+
+    next(error);
+};
+
+app.use(errorHandler);
 
 
 app.listen(port,()=>{
