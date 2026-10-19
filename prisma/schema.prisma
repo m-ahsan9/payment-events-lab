@@ -18,4 +18,5 @@ model PaymentEvent {
   amountMinor BigInt
   currency    String
   receivedAt  DateTime @default(now())
+  processedAt DateTime?
 }
