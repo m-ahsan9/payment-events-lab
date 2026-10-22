@@ -39,6 +39,10 @@ const worker = new Worker(
         if (!payment) {
             throw new Error(`Payment event not found: ${eventId}`);
         }
+        console.log("Processing attempt:", job.attemptsMade + 1);
+
+// TEMPORARY: simulate one failed attempt for this test event.
+
 
        const result = await prisma.paymentEvent.updateMany({
     where: {
