@@ -8,7 +8,7 @@ if (!secret) {
 }
 
 const payment = {
-    eventId: "evt_auto_recovery_001",
+    eventId: "evt_status_flow_003",
     orderId: "ord_001",
     amountMinor: 25000,
     type: "payment.succeeded",

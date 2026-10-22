@@ -158,6 +158,56 @@ catch (error) {
                                                          
 })
 
+app.get("/payment-events/:eventId", async (req, res) => {
+    const eventId = req.params.eventId;
+
+    try {
+        const payment = await prisma.paymentEvent.findUnique({
+            where: { eventId },
+            select: {
+                eventId: true,
+                receivedAt: true,
+                processedAt: true,
+                outbox: {
+                    select: {
+                        enqueuedAt: true,
+                    },
+                },
+            },
+        });
+
+        if (!payment) {
+            return res.status(404).json({
+                error: "Payment event not found",
+            });
+        }
+
+        let status = "received";
+
+        if (payment.processedAt !== null) {
+            status = "processed";
+        } else if (payment.outbox?.enqueuedAt != null) {
+            status = "dispatched";
+        } else if (payment.outbox !== null) {
+            status = "pending_dispatch";
+        }
+
+        return res.json({
+            eventId: payment.eventId,
+            status,
+            receivedAt: payment.receivedAt,
+            enqueuedAt: payment.outbox?.enqueuedAt ?? null,
+            processedAt: payment.processedAt,
+        });
+    } catch (error) {
+        console.error("Failed to read payment event:", error);
+
+        return res.status(500).json({
+            error: "Failed to read payment event",
+        });
+    }
+});
+
 const errorHandler: ErrorRequestHandler = (
     error: unknown,
     req,
