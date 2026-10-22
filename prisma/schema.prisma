@@ -19,4 +19,14 @@ model PaymentEvent {
   currency    String
   receivedAt  DateTime @default(now())
   processedAt DateTime?
+  outbox PaymentOutbox?
+}
+model PaymentOutbox {
+  eventId    String    @id
+  createdAt  DateTime  @default(now())
+  enqueuedAt DateTime?
+
+  payment PaymentEvent @relation(fields: [eventId], references: [eventId])
+
+  @@index([enqueuedAt, createdAt])
 }

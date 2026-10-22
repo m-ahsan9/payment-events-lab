@@ -8,7 +8,7 @@ if (!secret) {
 }
 
 const payment = {
-    eventId: "evt_signed_001",
+    eventId: "evt_auto_recovery_001",
     orderId: "ord_001",
     amountMinor: 25000,
     type: "payment.succeeded",
@@ -18,10 +18,10 @@ const payment = {
 const body = JSON.stringify(payment);
 const bodyBytes = Buffer.from(body, "utf8");
 
-// const timestamp = Math.floor(Date.now() / 1000).toString();
-const timestamp = (
-    Math.floor(Date.now() / 1000) - 600
-).toString();
+ const timestamp = Math.floor(Date.now() / 1000).toString();
+// const timestamp = (
+//     Math.floor(Date.now() / 1000) - 600
+// ).toString();
 
 const signature = createHmac("sha256", secret)
     .update(timestamp + ".")

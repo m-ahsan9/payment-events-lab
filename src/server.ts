@@ -91,14 +91,23 @@ app.post('/webhooks/payments', async(req,res)=>{
         return res.status(400).json({error:"currency  must be a non-empty string and equal to PKR "})
     }
     try {
-    await prisma.paymentEvent.create({
+ await prisma.$transaction(async (tx) => {
+    await tx.paymentEvent.create({
         data: {
             eventId,
             orderId,
             amountMinor: BigInt(amountMinor),
             type,
-            currency
-        }
+            currency,
+        },
+    });
+
+    await tx.paymentOutbox.create({
+        data: {
+            eventId,
+        },
+    });
+
     });
 
     return res.status(200).json({ received: true });
